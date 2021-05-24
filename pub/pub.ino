@@ -19,7 +19,7 @@ BearSSL::PrivateKey key(AWS_CERT_PRIVATE);
 
 // ESP8266 MQTT client config
 const int MQTT_PORT = 8883;
-const char MQTT_PUB_TOPIC[] = "iot_topic"; // Add you specifc topic for publishing to here
+const char MQTT_PUB_TOPIC[] = "iot/test_topic"; // Add you specifc topic for publishing to here
 MQTTClient client;
 
 //////////////////////////////////////////////////////////// 
@@ -27,27 +27,24 @@ MQTTClient client;
 ////////////////////////////////////////////////////////////
 
 /**
- * Initialises connection to the wifi
- * 
- * @param ssid SSID of the wifi
- * @param password wifi passord
+ * Initialises connection to the WiFi
  */
-void setupWifi(const char* ssid, const char* password) {
-  u8g2.drawStr(0, 10, "Connecting to:");
-  u8g2.drawStr(0, 20, WIFI_SSID);
-  u8g2.sendBuffer();
+void setupWifi() {
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(WIFI_SSID);
   delay(1000);
   WiFi.hostname(THINGNAME);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   
-  // Print connecting until connected
+  // Print until connected
   while (WiFi.status() != WL_CONNECTED) {
     delay(200);
-    u8g2.setCursor(0,40);
-    u8g2.print("WiFi Connecting...");
-    sendClear(500, "display");
+    Serial.print(".");
+
   }
+  Serial.println("");
+  Serial.println("WiFi Connected!");
   timeClient.begin();
   while(!timeClient.update()){
     timeClient.forceUpdate();
@@ -56,27 +53,23 @@ void setupWifi(const char* ssid, const char* password) {
 }
 
 /**
- * 
+ * Initialises the MQTT broker connection to AWS.
  */
 void connectMqtt() {
-  u8g2.drawStr(0, 10, "MQTT Connecting...");
-  u8g2.sendBuffer();
+  Serial.println("MQTT Connecting...");
   while (!client.connected()) {
     if (client.connect(THINGNAME)) {
-      u8g2.drawStr(0, 20, "MQTT Connected!");
-      u8g2.sendBuffer();
+      Serial.println("MQTT Connected!");
     } else {
-      u8g2.drawStr(0, 20, " MQTT Connection failed -> repeating in 5 seconds");
-      u8g2.sendBuffer();
+      Serial.println("MQTT Connection failed -> repeating in 5 seconds");
       delay(5000);
     }
   }
   delay(1000);
-  u8g2.clearDisplay();
 }
 
 /**
- * 
+ * Published as message to the AWS IoT core.
  */
 void publishMessage(char* msg) {
   StaticJsonDocument<200> doc;
@@ -86,20 +79,22 @@ void publishMessage(char* msg) {
   char jsonBuffer[512];
   serializeJson(doc, jsonBuffer); // print to client
 
+  // Publish the json message to AWS
   client.publish(MQTT_PUB_TOPIC, jsonBuffer);
+  Serial.print("Message published to: ");
+  Serial.println(MQTT_PUB_TOPIC);
 }
-
 
 //////////////////////////////////////////////////////////// 
 ///           END OF ACCESSORY FUNCTIONS
 ////////////////////////////////////////////////////////////
 
+
 void setup() {
-  // OLED setup
-  Serial.begin();
+  Serial.begin(115200);
 
   // Wifi set up
-  setupWifi(WIFI_SSID, WIFI_PASS);
+  setupWifi();
 
   // Set up secure MQTT connection
   net.setTrustAnchors(&cert);
@@ -111,14 +106,15 @@ void setup() {
 void loop() {
   // Re-connect wifi and/or mqtt connection if lost
   if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi Connection lost, reconnecting...");
     setupWifi();
   }
   if (!client.connected()) {
+    Serial.println("MQTT Connection lost, reconnecting...");
     connectMqtt();
   }
   
   // Publish message to AWS IoT Core
-  publishMessage(reading);
-
+  publishMessage("data to be sent");
   delay(10000);
 }
