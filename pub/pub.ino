@@ -19,7 +19,7 @@ BearSSL::PrivateKey key(AWS_CERT_PRIVATE);
 
 // ESP8266 MQTT client config
 const int MQTT_PORT = 8883;
-const char MQTT_PUB_TOPIC[] = "iot/test_topic"; // Add you specifc topic for publishing to here
+const char MQTT_PUB_TOPIC[] = "iot_pub/test_topic"; // Add you specifc topic for publishing to here
 MQTTClient client;
 
 //////////////////////////////////////////////////////////// 
